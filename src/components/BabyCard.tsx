@@ -78,8 +78,12 @@ export default function BabyCard({ baby, onEdit, onDelete }: BabyCardProps) {
     <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 p-5 hover:shadow-md transition-shadow">
       <Link href={`/dashboard/baby/${baby.recordName}`} className="block">
         <div className="flex items-center gap-4">
-          <div className="w-16 h-16 rounded-full bg-gradient-to-br from-blue-100 to-pink-100 dark:from-blue-900 dark:to-pink-900 flex items-center justify-center text-2xl flex-shrink-0">
-            {baby.gender === 'male' ? '👦' : '👧'}
+          <div className="w-16 h-16 rounded-full bg-gradient-to-br from-blue-100 to-pink-100 dark:from-blue-900 dark:to-pink-900 flex items-center justify-center text-2xl flex-shrink-0 overflow-hidden">
+            {baby.avatar ? (
+              <img src={baby.avatar} alt={baby.name} className="w-full h-full object-cover" />
+            ) : (
+              baby.gender === 'male' ? '👦' : '👧'
+            )}
           </div>
           <div className="flex-1 min-w-0">
             <h3 className="text-lg font-semibold text-gray-800 dark:text-gray-100 truncate">

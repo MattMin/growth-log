@@ -4,6 +4,7 @@ export interface Baby {
   birthDate: string; // ISO date string
   gender: 'male' | 'female';
   prematureBirthDate?: string; // ISO date string for premature babies
+  avatar?: string; // base64 data URL for custom avatar
 }
 
 export interface GrowthRecord {

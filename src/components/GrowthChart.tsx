@@ -133,9 +133,61 @@ export default function GrowthChart({ records, birthDate, gender, standard, meas
 
   const unit = getMeasureTypeUnit(measureType);
 
+  // Limit x-axis to latest measurement + 2 months
+  const maxDataMonth = babyPoints.length > 0 ? Math.max(...babyPoints.map(p => p.x)) : 12;
+  const xAxisMax = maxDataMonth + 2;
+
+  // Find the x value to use for right-side labels (the visible max)
+  const labelsToAnnotate = ['3%', '50%', '97%'];
+
+  // Custom plugin to draw percentile labels on the right side of the chart
+  const rightLabelPlugin = {
+    id: 'rightLabels',
+    afterDraw(chart: ChartJS<'line'>) {
+      const { ctx, chartArea, scales } = chart;
+      const yScale = scales.y;
+      if (!yScale) return;
+      const visibleXMax = scales.x.max;
+
+      chart.data.datasets.forEach((dataset) => {
+        if (!labelsToAnnotate.includes(dataset.label as string)) return;
+        const data = dataset.data as { x: number; y: number }[];
+        if (!data || data.length < 2) return;
+
+        // Find the y value at visibleXMax by interpolation
+        let yAtMax: number | null = null;
+        for (let j = 0; j < data.length - 1; j++) {
+          if (data[j].x <= visibleXMax && data[j + 1].x >= visibleXMax) {
+            const t = (visibleXMax - data[j].x) / (data[j + 1].x - data[j].x);
+            yAtMax = data[j].y + t * (data[j + 1].y - data[j].y);
+            break;
+          }
+        }
+        if (yAtMax === null && data.length > 0 && data[data.length - 1].x <= visibleXMax) {
+          yAtMax = data[data.length - 1].y;
+        }
+        if (yAtMax === null) return;
+
+        const pixelY = yScale.getPixelForValue(yAtMax);
+        ctx.save();
+        ctx.font = '10px sans-serif';
+        ctx.fillStyle = 'rgba(107, 114, 128, 0.8)';
+        ctx.textAlign = 'left';
+        ctx.textBaseline = 'middle';
+        ctx.fillText(dataset.label as string, chartArea.right + 4, pixelY);
+        ctx.restore();
+      });
+    },
+  };
+
   const options: ChartOptions<'line'> = {
     responsive: true,
     maintainAspectRatio: false,
+    layout: {
+      padding: {
+        right: 35,
+      },
+    },
     interaction: {
       mode: 'nearest',
       intersect: false,
@@ -148,8 +200,8 @@ export default function GrowthChart({ records, birthDate, gender, standard, meas
           text: '年龄 (月)',
           color: '#9CA3AF',
         },
-        min: Math.max(0, Math.min(-1, ...babyPoints.map(p => p.x)) - 1),
-        max: Math.max(...months, ...babyPoints.map(p => p.x)) + 1,
+        min: 0,
+        max: xAxisMax,
         ticks: {
           stepSize: 2,
           color: '#9CA3AF',
@@ -205,13 +257,7 @@ export default function GrowthChart({ records, birthDate, gender, standard, meas
         {babyName} – {getMeasureTypeLabel(measureType)}
       </h3>
       <div className="relative" style={{ height: '400px' }}>
-        <Line ref={chartRef} data={chartData} options={options} />
-      </div>
-      {/* Percentile legend */}
-      <div className="flex justify-end gap-3 mt-2 text-xs text-gray-400 dark:text-gray-500">
-        {['P3', 'P15', 'P50', 'P85', 'P97'].map(p => (
-          <span key={p}>{percentileLabels[p]}</span>
-        ))}
+        <Line ref={chartRef} data={chartData} options={options} plugins={[rightLabelPlugin]} />
       </div>
     </div>
   );
