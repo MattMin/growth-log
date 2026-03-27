@@ -17,6 +17,7 @@ const geistMono = Geist_Mono({
 export const metadata: Metadata = {
   title: "宝宝成长记录",
   description: "记录和追踪宝宝的成长数据，包括身高、体重、头围，并展示生长曲线趋势",
+  manifest: "/manifest.json",
 };
 
 export default function RootLayout({
