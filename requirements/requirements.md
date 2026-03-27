@@ -1,7 +1,7 @@
 # 硬性需求
 1. web 应用
 2. 可以支持部署在 vercel 中
-3. 集成 iCloud（CloudKit JS)
+3. ~~集成 iCloud（CloudKit JS)~~
 
 # 页面样式
 我没有提供UI, 你需要自己设计一套UI, 要求:

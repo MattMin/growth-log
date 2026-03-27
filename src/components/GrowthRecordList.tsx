@@ -2,7 +2,7 @@
 
 import { GrowthRecord, MeasureType } from '@/lib/types';
 import { getMeasureTypeLabel, getMeasureTypeUnit, calculatePercentile, calculateAgeInMonths } from '@/lib/growth-standards';
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 
 interface GrowthRecordListProps {
   records: GrowthRecord[];
@@ -15,14 +15,21 @@ interface GrowthRecordListProps {
 
 export default function GrowthRecordList({ records, birthDate, gender, standard, onEdit, onDelete }: GrowthRecordListProps) {
   const [activeType, setActiveType] = useState<MeasureType>('weight');
+  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
 
   const types: MeasureType[] = ['weight', 'height', 'headCircumference'];
 
-  const filteredRecords = records.filter(r => {
-    if (activeType === 'weight') return r.weight != null;
-    if (activeType === 'height') return r.height != null;
-    return r.headCircumference != null;
-  });
+  const filteredRecords = useMemo(() => {
+    const filtered = records.filter(r => {
+      if (activeType === 'weight') return r.weight != null;
+      if (activeType === 'height') return r.height != null;
+      return r.headCircumference != null;
+    });
+    return filtered.sort((a, b) => {
+      const cmp = new Date(a.date).getTime() - new Date(b.date).getTime();
+      return sortOrder === 'asc' ? cmp : -cmp;
+    });
+  }, [records, activeType, sortOrder]);
 
   const getValue = (record: GrowthRecord): number | undefined => {
     if (activeType === 'weight') return record.weight;
@@ -32,26 +39,44 @@ export default function GrowthRecordList({ records, birthDate, gender, standard,
 
   const formatDate = (dateStr: string): string => {
     const d = new Date(dateStr);
-    return `${d.getFullYear()}年${d.getMonth() + 1}月${d.getDate()}日`;
+    const y = d.getFullYear();
+    const m = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    return `${y}-${m}-${day}`;
   };
 
   return (
     <div>
       {/* Type tabs */}
-      <div className="flex gap-1 bg-gray-100 dark:bg-gray-700 rounded-xl p-1 mb-4">
-        {types.map(type => (
-          <button
-            key={type}
-            onClick={() => setActiveType(type)}
-            className={`flex-1 py-2 px-3 rounded-lg text-sm font-medium transition-colors ${
-              activeType === type
-                ? 'bg-white dark:bg-gray-600 text-gray-800 dark:text-gray-100 shadow-sm'
-                : 'text-gray-500 dark:text-gray-400'
-            }`}
-          >
-            {getMeasureTypeLabel(type)}
-          </button>
-        ))}
+      <div className="flex items-center gap-2 mb-4">
+        <div className="flex gap-1 bg-gray-100 dark:bg-gray-700 rounded-xl p-1 flex-1">
+          {types.map(type => (
+            <button
+              key={type}
+              onClick={() => setActiveType(type)}
+              className={`flex-1 py-2 px-3 rounded-lg text-sm font-medium transition-colors ${
+                activeType === type
+                  ? 'bg-white dark:bg-gray-600 text-gray-800 dark:text-gray-100 shadow-sm'
+                  : 'text-gray-500 dark:text-gray-400'
+              }`}
+            >
+              {getMeasureTypeLabel(type)}
+            </button>
+          ))}
+        </div>
+        <button
+          onClick={() => setSortOrder(prev => prev === 'asc' ? 'desc' : 'asc')}
+          className="p-2 rounded-lg text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+          title={sortOrder === 'asc' ? '当前：日期正序' : '当前：日期倒序'}
+        >
+          <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            {sortOrder === 'desc' ? (
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 14l-7 7m0 0l-7-7m7 7V3" />
+            ) : (
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 10l7-7m0 0l7 7M12 3v18" />
+            )}
+          </svg>
+        </button>
       </div>
 
       {/* Records */}
@@ -60,7 +85,8 @@ export default function GrowthRecordList({ records, birthDate, gender, standard,
           <p>暂无{getMeasureTypeLabel(activeType)}数据</p>
         </div>
       ) : (
-        <div className="space-y-0.5">
+        <div className="max-h-96 overflow-y-auto">
+          <div className="space-y-0.5">
           {filteredRecords.map(record => {
             const value = getValue(record);
             const ageMonths = calculateAgeInMonths(birthDate, record.date);
@@ -105,6 +131,7 @@ export default function GrowthRecordList({ records, birthDate, gender, standard,
               </div>
             );
           })}
+          </div>
         </div>
       )}
     </div>
