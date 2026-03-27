@@ -76,7 +76,7 @@ export default function ImportById({ onImported, onCancel }: ImportByIdProps) {
             disabled={loading || !previewName}
             className="text-blue-500 dark:text-blue-400 font-semibold disabled:opacity-40"
           >
-            导入
+            {loading ? '导入中...' : '导入'}
           </button>
         </div>
 

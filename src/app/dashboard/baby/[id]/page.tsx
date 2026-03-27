@@ -63,8 +63,22 @@ export default function BabyDetailPage() {
   };
 
   const handleCsvImport = async (importedRecords: GrowthRecord[]) => {
+    const existingRecords = await getGrowthRecords(babyId);
+    const existingByDate = new Map(existingRecords.map(r => [r.date, r]));
+
     for (const record of importedRecords) {
-      await addGrowthRecord(record);
+      const existing = existingByDate.get(record.date);
+      if (existing) {
+        // Update only if values differ
+        const sameWeight = existing.weight === record.weight;
+        const sameHeight = existing.height === record.height;
+        const sameHead = existing.headCircumference === record.headCircumference;
+        if (!sameWeight || !sameHeight || !sameHead) {
+          await updateGrowthRecord({ ...record, id: existing.id, recordName: existing.recordName });
+        }
+      } else {
+        await addGrowthRecord(record);
+      }
     }
     await loadRecords();
     setShowCsvImport(false);

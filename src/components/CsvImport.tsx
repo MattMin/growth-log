@@ -6,7 +6,7 @@ import { GrowthRecord } from '@/lib/types';
 
 interface CsvImportProps {
   babyId: string;
-  onImport: (records: GrowthRecord[]) => void;
+  onImport: (records: GrowthRecord[]) => void | Promise<void>;
   onCancel: () => void;
 }
 
@@ -14,6 +14,7 @@ export default function CsvImport({ babyId, onImport, onCancel }: CsvImportProps
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [preview, setPreview] = useState<GrowthRecord[]>([]);
   const [error, setError] = useState('');
+  const [importing, setImporting] = useState(false);
 
   useEffect(() => {
     document.body.style.overflow = 'hidden';
@@ -75,9 +76,13 @@ export default function CsvImport({ babyId, onImport, onCancel }: CsvImportProps
     });
   };
 
-  const handleImport = () => {
-    if (preview.length > 0) {
-      onImport(preview);
+  const handleImport = async () => {
+    if (preview.length === 0 || importing) return;
+    setImporting(true);
+    try {
+      await onImport(preview);
+    } finally {
+      setImporting(false);
     }
   };
 
@@ -89,10 +94,10 @@ export default function CsvImport({ babyId, onImport, onCancel }: CsvImportProps
           <h2 className="text-lg font-semibold text-gray-800 dark:text-gray-100">导入数据</h2>
           <button
             onClick={handleImport}
-            disabled={preview.length === 0}
+            disabled={preview.length === 0 || importing}
             className="text-blue-500 dark:text-blue-400 font-semibold disabled:opacity-40"
           >
-            导入 ({preview.length})
+            {importing ? '导入中...' : `导入 (${preview.length})`}
           </button>
         </div>
 
