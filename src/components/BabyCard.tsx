@@ -2,11 +2,13 @@
 
 import { Baby } from '@/lib/types';
 import Link from 'next/link';
+import { useRef, useState } from 'react';
 
 interface BabyCardProps {
   baby: Baby;
   onEdit: (baby: Baby) => void;
-  onDelete: (recordName: string) => void;
+  onDelete: (id: string) => void;
+  showCopyId?: boolean;
 }
 
 function calculateAge(birthDate: string): string {
@@ -47,7 +49,6 @@ function calculateCorrectedAge(birthDate: string, prematureBirthDate: string): s
   let months = correctedDate.getMonth() - correctedBirth.getMonth();
   let days = correctedDate.getDate() - correctedBirth.getDate();
 
-  // Adjust for premature time
   const totalCorrectedDays = Math.floor((now.getTime() - actual.getTime()) / (1000 * 60 * 60 * 24)) - diffDays;
   if (totalCorrectedDays < 0) return '尚未到预产期';
 
@@ -68,49 +69,156 @@ function calculateCorrectedAge(birthDate: string, prematureBirthDate: string): s
   return parts.join('');
 }
 
-export default function BabyCard({ baby, onEdit, onDelete }: BabyCardProps) {
+export default function BabyCard({ baby, onEdit, onDelete, showCopyId }: BabyCardProps) {
   const age = calculateAge(baby.birthDate);
   const correctedAge = baby.prematureBirthDate
     ? calculateCorrectedAge(baby.birthDate, baby.prematureBirthDate)
     : null;
 
+  const babyKey = baby.id || baby.recordName || '';
+  const [offsetX, setOffsetX] = useState(0);
+  const [swiped, setSwiped] = useState(false);
+  const startXRef = useRef(0);
+  const startYRef = useRef(0);
+  const currentXRef = useRef(0);
+  const isDraggingRef = useRef(false);
+  const isVerticalRef = useRef(false);
+  const [copied, setCopied] = useState(false);
+
+  const ACTION_WIDTH = 140;
+
+  const handleTouchStart = (e: React.TouchEvent) => {
+    startXRef.current = e.touches[0].clientX;
+    startYRef.current = e.touches[0].clientY;
+    currentXRef.current = swiped ? -ACTION_WIDTH : 0;
+    isDraggingRef.current = false;
+    isVerticalRef.current = false;
+  };
+
+  const handleTouchMove = (e: React.TouchEvent) => {
+    const dx = e.touches[0].clientX - startXRef.current;
+    const dy = e.touches[0].clientY - startYRef.current;
+
+    if (!isDraggingRef.current && !isVerticalRef.current) {
+      if (Math.abs(dy) > Math.abs(dx) && Math.abs(dy) > 5) {
+        isVerticalRef.current = true;
+        return;
+      }
+      if (Math.abs(dx) > 5) {
+        isDraggingRef.current = true;
+      }
+    }
+
+    if (isVerticalRef.current) return;
+    if (!isDraggingRef.current) return;
+
+    const newX = currentXRef.current + dx;
+    const clamped = Math.max(-ACTION_WIDTH, Math.min(0, newX));
+    setOffsetX(clamped);
+  };
+
+  const handleTouchEnd = () => {
+    if (isVerticalRef.current) return;
+    if (offsetX < -ACTION_WIDTH / 2) {
+      setOffsetX(-ACTION_WIDTH);
+      setSwiped(true);
+    } else {
+      setOffsetX(0);
+      setSwiped(false);
+    }
+    isDraggingRef.current = false;
+  };
+
+  const closeSwiped = () => {
+    setOffsetX(0);
+    setSwiped(false);
+  };
+
+  const handleCopyId = async (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (!babyKey) return;
+    try {
+      await navigator.clipboard.writeText(babyKey);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 1500);
+    } catch {
+      const ta = document.createElement('textarea');
+      ta.value = babyKey;
+      document.body.appendChild(ta);
+      ta.select();
+      document.execCommand('copy');
+      document.body.removeChild(ta);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 1500);
+    }
+  };
+
   return (
-    <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 p-5 hover:shadow-md transition-shadow">
-      <Link href={`/dashboard/baby/${baby.recordName}`} className="block">
-        <div className="flex items-center gap-4">
-          <div className="w-16 h-16 rounded-full bg-gradient-to-br from-blue-100 to-pink-100 dark:from-blue-900 dark:to-pink-900 flex items-center justify-center text-2xl flex-shrink-0 overflow-hidden">
-            {baby.avatar ? (
-              <img src={baby.avatar} alt={baby.name} className="w-full h-full object-cover" />
-            ) : (
-              baby.gender === 'male' ? '👦' : '👧'
-            )}
-          </div>
-          <div className="flex-1 min-w-0">
-            <h3 className="text-lg font-semibold text-gray-800 dark:text-gray-100 truncate">
-              {baby.name}
-            </h3>
-            <p className="text-sm text-gray-500 dark:text-gray-400">{age}</p>
-            {correctedAge && (
-              <p className="text-xs text-gray-400 dark:text-gray-500">
-                校正年龄：{correctedAge}
-              </p>
-            )}
-          </div>
-        </div>
-      </Link>
-      <div className="flex gap-2 mt-4 pt-3 border-t border-gray-100 dark:border-gray-700">
+    <div className="relative overflow-hidden rounded-2xl">
+      {/* Action buttons behind */}
+      <div className="absolute right-0 top-0 bottom-0 flex items-stretch" style={{ width: ACTION_WIDTH }}>
         <button
-          onClick={(e) => { e.stopPropagation(); onEdit(baby); }}
-          className="flex-1 text-sm py-1.5 rounded-lg text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-colors"
+          onClick={() => { closeSwiped(); onEdit(baby); }}
+          className="flex-1 flex items-center justify-center bg-blue-500 text-white text-sm font-medium"
         >
           编辑
         </button>
         <button
-          onClick={(e) => { e.stopPropagation(); if (baby.recordName) onDelete(baby.recordName); }}
-          className="flex-1 text-sm py-1.5 rounded-lg text-red-500 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
+          onClick={() => { closeSwiped(); if (babyKey) onDelete(babyKey); }}
+          className="flex-1 flex items-center justify-center bg-red-500 text-white text-sm font-medium"
         >
           删除
         </button>
+      </div>
+
+      {/* Swipeable card */}
+      <div
+        className="relative bg-white dark:bg-gray-800 shadow-sm border border-gray-100 dark:border-gray-700 p-5 transition-transform duration-150 ease-out"
+        style={{ transform: `translateX(${offsetX}px)` }}
+        onTouchStart={handleTouchStart}
+        onTouchMove={handleTouchMove}
+        onTouchEnd={handleTouchEnd}
+      >
+        <Link href={`/dashboard/baby/${babyKey}`} className="block">
+          <div className="flex items-center gap-4">
+            <div className="w-16 h-16 rounded-full bg-gradient-to-br from-blue-100 to-pink-100 dark:from-blue-900 dark:to-pink-900 flex items-center justify-center text-2xl flex-shrink-0 overflow-hidden">
+              {baby.avatar ? (
+                <img src={baby.avatar} alt={baby.name} className="w-full h-full object-cover" />
+              ) : (
+                baby.gender === 'male' ? '👦' : '👧'
+              )}
+            </div>
+            <div className="flex-1 min-w-0">
+              <h3 className="text-lg font-semibold text-gray-800 dark:text-gray-100 truncate">
+                {baby.name}
+              </h3>
+              <p className="text-sm text-gray-500 dark:text-gray-400">{age}</p>
+              {correctedAge && (
+                <p className="text-xs text-gray-400 dark:text-gray-500">
+                  校正年龄：{correctedAge}
+                </p>
+              )}
+            </div>
+            {showCopyId && babyKey && (
+              <button
+                onClick={handleCopyId}
+                className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors text-gray-400 dark:text-gray-500 flex-shrink-0"
+                title="复制宝宝ID"
+              >
+                {copied ? (
+                  <svg className="w-5 h-5 text-green-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                  </svg>
+                ) : (
+                  <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                  </svg>
+                )}
+              </button>
+            )}
+          </div>
+        </Link>
       </div>
     </div>
   );

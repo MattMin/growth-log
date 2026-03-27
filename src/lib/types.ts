@@ -1,5 +1,6 @@
 export interface Baby {
-  recordName?: string;
+  id?: string; // UUID, primary key in supabase
+  recordName?: string; // deprecated, kept for localStorage compat
   name: string;
   birthDate: string; // ISO date string
   gender: 'male' | 'female';
@@ -8,7 +9,8 @@ export interface Baby {
 }
 
 export interface GrowthRecord {
-  recordName?: string;
+  id?: string; // UUID, primary key in supabase
+  recordName?: string; // deprecated, kept for localStorage compat
   babyId: string;
   date: string; // ISO date string
   weight?: number; // kg

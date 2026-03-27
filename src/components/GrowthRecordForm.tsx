@@ -33,6 +33,7 @@ export default function GrowthRecordForm({ babyId, record, onSave, onCancel }: G
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     onSave({
+      id: record?.id,
       recordName: record?.recordName,
       babyId,
       date,

@@ -67,6 +67,7 @@ export default function BabyForm({ baby, onSave, onCancel }: BabyFormProps) {
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     onSave({
+      id: baby?.id,
       recordName: baby?.recordName,
       name,
       birthDate,

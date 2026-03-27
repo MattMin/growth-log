@@ -70,7 +70,7 @@ export default function GrowthRecordList({ records, birthDate, gender, standard,
 
             return (
               <div
-                key={record.recordName}
+                key={record.id || record.recordName}
                 className="flex items-center justify-between py-3.5 px-4 hover:bg-gray-50 dark:hover:bg-gray-700/50 rounded-lg group transition-colors"
               >
                 <span className="text-gray-700 dark:text-gray-200 text-sm">
@@ -93,7 +93,7 @@ export default function GrowthRecordList({ records, birthDate, gender, standard,
                       </svg>
                     </button>
                     <button
-                      onClick={() => record.recordName && onDelete(record.recordName)}
+                      onClick={() => { const id = record.id || record.recordName; if (id) onDelete(id); }}
                       className="p-1 text-gray-400 hover:text-red-500"
                     >
                       <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">

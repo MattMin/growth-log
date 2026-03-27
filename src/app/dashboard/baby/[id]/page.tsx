@@ -35,7 +35,7 @@ export default function BabyDetailPage() {
   }, [babyId, getGrowthRecords]);
 
   useEffect(() => {
-    const found = babies.find(b => b.recordName === babyId);
+    const found = babies.find(b => (b.id || b.recordName) === babyId);
     if (found) {
       setBaby(found);
       loadRecords().then(() => setLoading(false));
@@ -45,7 +45,7 @@ export default function BabyDetailPage() {
   }, [babies, babyId, router, loadRecords]);
 
   const handleSaveRecord = async (record: GrowthRecord) => {
-    if (record.recordName) {
+    if (record.id || record.recordName) {
       await updateGrowthRecord(record);
     } else {
       await addGrowthRecord(record);
@@ -55,9 +55,9 @@ export default function BabyDetailPage() {
     setEditingRecord(null);
   };
 
-  const handleDeleteRecord = async (recordName: string) => {
+  const handleDeleteRecord = async (id: string) => {
     if (confirm('确定要删除此记录吗？')) {
-      await removeGrowthRecord(recordName, babyId);
+      await removeGrowthRecord(id, babyId);
       await loadRecords();
     }
   };
@@ -168,7 +168,7 @@ export default function BabyDetailPage() {
             title="导出CSV"
           >
             <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m4-8l-4-4m0 0L16 8m4-4v12" />
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0l-4 4m4-4v12" />
             </svg>
           </button>
           <button
