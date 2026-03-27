@@ -19,6 +19,11 @@ export default function BabyForm({ baby, onSave, onCancel }: BabyFormProps) {
   const avatarInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
+    document.body.style.overflow = 'hidden';
+    return () => { document.body.style.overflow = ''; };
+  }, []);
+
+  useEffect(() => {
     if (baby) {
       setName(baby.name);
       setBirthDate(baby.birthDate);

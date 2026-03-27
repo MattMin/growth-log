@@ -83,7 +83,7 @@ export default function GrowthRecordList({ records, birthDate, gender, standard,
                   <span className="text-gray-400 dark:text-gray-500 text-sm w-12 text-right">
                     {percentile != null ? `${Math.round(percentile)}%` : '----'}
                   </span>
-                  <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                  <div className="flex gap-1">
                     <button
                       onClick={() => onEdit(record)}
                       className="p-1 text-gray-400 hover:text-blue-500"

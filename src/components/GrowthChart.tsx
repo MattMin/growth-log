@@ -138,7 +138,7 @@ export default function GrowthChart({ records, birthDate, gender, standard, meas
   const xAxisMax = maxDataMonth + 2;
 
   // Find the x value to use for right-side labels (the visible max)
-  const labelsToAnnotate = ['3%', '50%', '97%'];
+  const labelsToAnnotate = ['1%', '3%', '15%', '50%', '85%', '97%', '99%'];
 
   // Custom plugin to draw percentile labels on the right side of the chart
   const rightLabelPlugin = {

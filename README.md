@@ -8,7 +8,7 @@
 - **成长数据记录** — 记录体重 (kg)、身高 (cm)、头围 (cm)，支持编辑和删除
 - **生长曲线图** — 基于 Chart.js，叠加 WHO / CDC 百分位参考线 (P1–P99)，图表右侧直接标注 P3/P50/P97 数值，X 轴自动适配数据范围
 - **生长标准** — WHO 标准 (0-18 岁体重/身高, 0-5 岁头围) 和 CDC 标准 (0-18 岁体重/身高, 0-3 岁头围)
-- **CSV 导入** — 批量导入历史数据，格式：`Date, Weight (kg), Height (cm), Head Circumference (cm)`
+- **CSV 导入/导出** — 批量导入历史数据或导出备份，格式：`Date, Weight (kg), Height (cm), Head Circumference (cm)`
 - **深色 / 浅色模式** — 跟随系统偏好或手动切换
 - **iCloud 同步** — 通过 CloudKit JS 集成 Apple 账号登录与数据同步，无 CloudKit 时自动使用 localStorage
 - **Vercel 部署** — 开箱即用，支持一键部署到 Vercel

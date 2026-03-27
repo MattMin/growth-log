@@ -5,7 +5,10 @@ const BABIES_KEY = 'growth-log-babies';
 const RECORDS_KEY = 'growth-log-records';
 
 function generateId(): string {
-  return crypto.randomUUID();
+  if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
+    return crypto.randomUUID();
+  }
+  return Date.now().toString(36) + Math.random().toString(36).substring(2, 10);
 }
 
 export function getLocalBabies(): Baby[] {

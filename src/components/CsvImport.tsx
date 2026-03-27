@@ -1,6 +1,6 @@
 'use client';
 
-import { useRef, useState } from 'react';
+import { useRef, useState, useEffect } from 'react';
 import Papa from 'papaparse';
 import { GrowthRecord } from '@/lib/types';
 
@@ -14,6 +14,11 @@ export default function CsvImport({ babyId, onImport, onCancel }: CsvImportProps
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [preview, setPreview] = useState<GrowthRecord[]>([]);
   const [error, setError] = useState('');
+
+  useEffect(() => {
+    document.body.style.overflow = 'hidden';
+    return () => { document.body.style.overflow = ''; };
+  }, []);
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];

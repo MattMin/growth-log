@@ -17,6 +17,11 @@ export default function GrowthRecordForm({ babyId, record, onSave, onCancel }: G
   const [headCircumference, setHeadCircumference] = useState('');
 
   useEffect(() => {
+    document.body.style.overflow = 'hidden';
+    return () => { document.body.style.overflow = ''; };
+  }, []);
+
+  useEffect(() => {
     if (record) {
       setDate(record.date);
       setWeight(record.weight?.toString() || '');
