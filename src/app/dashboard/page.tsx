@@ -8,7 +8,7 @@ import BabyForm from '@/components/BabyForm';
 import ImportById from '@/components/ImportById';
 
 export default function DashboardPage() {
-  const { babies, loading, addBaby, updateBaby, removeBaby, isSupabase } = useData();
+  const { babies, loading, addBaby, updateBaby, removeBaby, isSupabase, getBabyAvatar } = useData();
   const [showForm, setShowForm] = useState(false);
   const [editingBaby, setEditingBaby] = useState<Baby | null>(null);
   const [showImportById, setShowImportById] = useState(false);
@@ -90,6 +90,7 @@ export default function DashboardPage() {
               onEdit={handleEdit}
               onDelete={handleDelete}
               showCopyId={isSupabase}
+              loadAvatar={isSupabase ? getBabyAvatar : undefined}
             />
           ))}
         </div>

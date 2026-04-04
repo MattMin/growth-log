@@ -1,6 +1,6 @@
 'use client';
 
-import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
+import React, { createContext, useContext, useState, useEffect, useCallback, useRef } from 'react';
 import { Baby, GrowthRecord } from '@/lib/types';
 import { getSupabase, isSupabaseConfigured } from '@/lib/supabase';
 import {
@@ -50,6 +50,7 @@ interface DataContextType {
   refreshBabies: () => Promise<void>;
   importBabyById: (babyId: string, synced: boolean) => Promise<Baby | null>;
   fetchBabyById: (babyId: string) => Promise<Baby | null>;
+  getBabyAvatar: (babyId: string) => Promise<string | undefined>;
 }
 
 const DataContext = createContext<DataContextType | null>(null);
@@ -58,6 +59,8 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
   const [isSupabase, setIsSupabase] = useState(false);
   const [babies, setBabies] = useState<Baby[]>([]);
   const [loading, setLoading] = useState(true);
+  const avatarCacheRef = useRef<Map<string, string | undefined>>(new Map());
+  const pendingAvatarRequestsRef = useRef<Map<string, Promise<string | undefined>>>(new Map());
 
   const loadBabiesFromSupabase = useCallback(async () => {
     const sb = getSupabase();
@@ -66,7 +69,7 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
     if (ids.length === 0) return [];
     const { data, error } = await sb
       .from('babies')
-      .select('*')
+      .select('id,name,birth_date,gender,premature_birth_date')
       .in('id', ids);
     if (error) { console.error('Failed to fetch babies:', error); return []; }
     return (data || []).map((row: Record<string, unknown>) => ({
@@ -75,7 +78,6 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
       birthDate: row.birth_date as string,
       gender: row.gender as 'male' | 'female',
       prematureBirthDate: (row.premature_birth_date as string) || undefined,
-      avatar: (row.avatar as string) || undefined,
     }));
   }, []);
 
@@ -201,12 +203,58 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
     if (error) console.error('Failed to delete record:', error);
   }, []);
 
+  const getBabyAvatar = useCallback(async (babyId: string): Promise<string | undefined> => {
+    if (!babyId) return undefined;
+
+    if (avatarCacheRef.current.has(babyId)) {
+      return avatarCacheRef.current.get(babyId);
+    }
+
+    if (!isSupabase) {
+      const avatar = babies.find((baby) => (baby.id || baby.recordName) === babyId)?.avatar;
+      avatarCacheRef.current.set(babyId, avatar);
+      return avatar;
+    }
+
+    const existingRequest = pendingAvatarRequestsRef.current.get(babyId);
+    if (existingRequest) return existingRequest;
+
+    const sb = getSupabase();
+    if (!sb) return undefined;
+
+    const request = (async () => {
+      const { data, error } = await sb
+        .from('babies')
+        .select('avatar')
+        .eq('id', babyId)
+        .single();
+
+      if (error) {
+        console.error('Failed to fetch avatar:', error);
+        return undefined;
+      }
+
+      const avatar = (data as { avatar?: string } | null)?.avatar || undefined;
+      avatarCacheRef.current.set(babyId, avatar);
+      return avatar;
+    })().finally(() => {
+      pendingAvatarRequestsRef.current.delete(babyId);
+    });
+
+    pendingAvatarRequestsRef.current.set(babyId, request);
+    return request;
+  }, [isSupabase, babies]);
+
   // --- Public API ---
 
   const addBaby = useCallback(async (baby: Baby): Promise<Baby | null> => {
     if (isSupabase) {
       const saved = await supabaseAddBaby(baby);
-      if (saved) await refreshBabies();
+      if (saved) {
+        const babyKey = saved.id || saved.recordName;
+        if (babyKey) avatarCacheRef.current.set(babyKey, saved.avatar);
+        await refreshBabies();
+      }
       return saved;
     }
     const saved = saveLocalBaby(baby);
@@ -217,7 +265,11 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
   const updateBaby = useCallback(async (baby: Baby): Promise<Baby | null> => {
     if (isSupabase) {
       const saved = await supabaseUpdateBaby(baby);
-      if (saved) await refreshBabies();
+      if (saved) {
+        const babyKey = saved.id || saved.recordName;
+        if (babyKey) avatarCacheRef.current.set(babyKey, saved.avatar);
+        await refreshBabies();
+      }
       return saved;
     }
     const saved = saveLocalBaby(baby);
@@ -228,6 +280,7 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
   const removeBaby = useCallback(async (id: string) => {
     if (isSupabase) {
       await supabaseRemoveBaby(id);
+      avatarCacheRef.current.delete(id);
       await refreshBabies();
     } else {
       deleteLocalBaby(id);
@@ -344,6 +397,7 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
       refreshBabies,
       importBabyById,
       fetchBabyById,
+      getBabyAvatar,
     }}>
       {children}
     </DataContext.Provider>

@@ -2,13 +2,14 @@
 
 import { Baby } from '@/lib/types';
 import Link from 'next/link';
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 
 interface BabyCardProps {
   baby: Baby;
   onEdit: (baby: Baby) => void;
   onDelete: (id: string) => void;
   showCopyId?: boolean;
+  loadAvatar?: (babyId: string) => Promise<string | undefined>;
 }
 
 function calculateAge(birthDate: string): string {
@@ -69,7 +70,7 @@ function calculateCorrectedAge(birthDate: string, prematureBirthDate: string): s
   return parts.join('');
 }
 
-export default function BabyCard({ baby, onEdit, onDelete, showCopyId }: BabyCardProps) {
+export default function BabyCard({ baby, onEdit, onDelete, showCopyId, loadAvatar }: BabyCardProps) {
   const age = calculateAge(baby.birthDate);
   const correctedAge = baby.prematureBirthDate
     ? calculateCorrectedAge(baby.birthDate, baby.prematureBirthDate)
@@ -84,8 +85,55 @@ export default function BabyCard({ baby, onEdit, onDelete, showCopyId }: BabyCar
   const isDraggingRef = useRef(false);
   const isVerticalRef = useRef(false);
   const [copied, setCopied] = useState(false);
+  const [avatarSrc, setAvatarSrc] = useState<string | undefined>(baby.avatar);
+  const [shouldLoadAvatar, setShouldLoadAvatar] = useState(false);
+  const cardRef = useRef<HTMLDivElement | null>(null);
 
   const ACTION_WIDTH = 140;
+
+  useEffect(() => {
+    setAvatarSrc(baby.avatar);
+  }, [baby.avatar, baby.id, baby.recordName]);
+
+  useEffect(() => {
+    if (avatarSrc || !babyKey || !loadAvatar) return;
+
+    if (typeof IntersectionObserver === 'undefined') {
+      setShouldLoadAvatar(true);
+      return;
+    }
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries[0]?.isIntersecting) {
+          setShouldLoadAvatar(true);
+          observer.disconnect();
+        }
+      },
+      { rootMargin: '100px' }
+    );
+
+    if (cardRef.current) observer.observe(cardRef.current);
+
+    return () => {
+      observer.disconnect();
+    };
+  }, [avatarSrc, babyKey, loadAvatar]);
+
+  useEffect(() => {
+    if (!shouldLoadAvatar || avatarSrc || !babyKey || !loadAvatar) return;
+
+    let active = true;
+    loadAvatar(babyKey).then((loadedAvatar) => {
+      if (active && loadedAvatar) {
+        setAvatarSrc(loadedAvatar);
+      }
+    });
+
+    return () => {
+      active = false;
+    };
+  }, [shouldLoadAvatar, avatarSrc, babyKey, loadAvatar]);
 
   const handleTouchStart = (e: React.TouchEvent) => {
     startXRef.current = e.touches[0].clientX;
@@ -155,7 +203,7 @@ export default function BabyCard({ baby, onEdit, onDelete, showCopyId }: BabyCar
   };
 
   return (
-    <div className="relative overflow-hidden rounded-2xl">
+    <div ref={cardRef} className="relative overflow-hidden rounded-2xl">
       {/* Action buttons behind */}
       <div className="absolute right-0 top-0 bottom-0 flex items-stretch" style={{ width: ACTION_WIDTH }}>
         <button
@@ -183,8 +231,8 @@ export default function BabyCard({ baby, onEdit, onDelete, showCopyId }: BabyCar
         <Link href={`/dashboard/baby/${babyKey}`} className="block">
           <div className="flex items-center gap-4">
             <div className="w-16 h-16 rounded-full bg-gradient-to-br from-blue-100 to-pink-100 dark:from-blue-900 dark:to-pink-900 flex items-center justify-center text-2xl flex-shrink-0 overflow-hidden">
-              {baby.avatar ? (
-                <img src={baby.avatar} alt={baby.name} className="w-full h-full object-cover" />
+              {avatarSrc ? (
+                <img src={avatarSrc} alt={baby.name} className="w-full h-full object-cover" />
               ) : (
                 baby.gender === 'male' ? '👦' : '👧'
               )}
